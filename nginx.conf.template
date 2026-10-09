@@ -1,0 +1,37 @@
+worker_processes 1;
+
+events { worker_connections 1024; }
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    # 9 pipe-delimited fields — last two are session and username cookies
+    log_format traffic '$remote_addr|$time_iso8601|"$request"|$status|'
+                       '$body_bytes_sent|"$http_user_agent"|"$http_x_forwarded_for"|'
+                       '"$cookie_${SESSION_COOKIE_NAME}"|"$cookie_${USER_COOKIE_NAME}"';
+
+    access_log /var/log/nginx/access.log traffic;
+
+    server {
+        listen       ${PORT};
+        server_name  _;
+
+        # Reverse proxy — target site from ${TARGET_URL}
+        location / {
+            proxy_pass ${TARGET_URL};
+            proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Cookie $http_cookie;
+        }
+
+        # Telegram webhook (kept separate from proxied traffic)
+        location /tg-webhook/ {
+            proxy_pass http://127.0.0.1:8080/webhook/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+}
