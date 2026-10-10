@@ -50,7 +50,7 @@ http {
             proxy_cookie_domain ~.* $host;
             proxy_cookie_path ~.* /;
 
-            # ✅ Keep redirects on OUR domain (dynamic — uses $proxy_host)
+            #  Keep redirects on OUR domain (dynamic — uses $proxy_host)
             proxy_redirect https://$proxy_host/ /;
             proxy_redirect http://$proxy_host/  /;
 
