@@ -46,7 +46,7 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header User-Agent $http_user_agent;
 
-            # ✅ Re-scope target's cookies to OUR domain so browser keeps them
+            #  Re-scope target's cookies to OUR domain so browser keeps them
             proxy_cookie_domain ~.* $host;
             proxy_cookie_path ~.* /;
 
