@@ -6,10 +6,10 @@ http {
     include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
 
-    # 🔑 KEY FIX: force IPv4, re-resolve DNS every 10s
+    # Public DNS — works on Render (Docker's 127.0.0.11 does NOT exist here)
     resolver 8.8.8.8 1.1.1.1 valid=10s ipv6=off;
 
-    # 🔑 KEY FIX: bigger buffers for large upstream headers (cookies, CSP)
+    # Larger buffers for big upstream headers (cookies, CSP)
     proxy_buffer_size          16k;
     proxy_buffers              8 16k;
     proxy_busy_buffers_size    32k;
@@ -30,31 +30,45 @@ http {
         location / {
             # Variable forces runtime DNS re-resolution
             set $upstream "${TARGET_URL}";
-            proxy_pass $upstream$request_uri;
 
-            # 🔑 SNI + TLS correctness
+            # ✅ Correct URI composition (keeps path AND query string)
+            proxy_pass $upstream$uri$is_args$args;
+
+            # SNI + TLS correctness
             proxy_ssl_server_name on;
             proxy_ssl_name $proxy_host;
             proxy_ssl_protocols TLSv1.2 TLSv1.3;
 
-            # 🔑 Force IPv4 upstream (matches resolver ipv6=off)
+            # Forward client info
             proxy_set_header Host $proxy_host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header User-Agent $http_user_agent;
+
+            # ✅ Re-scope target's cookies to OUR domain so browser keeps them
+            proxy_cookie_domain ~.* $host;
+            proxy_cookie_path ~.* /;
+
+            # ✅ Keep redirects on OUR domain (dynamic — uses $proxy_host)
+            proxy_redirect https://$proxy_host/ /;
+            proxy_redirect http://$proxy_host/  /;
+
+            # ✅ Rewrite absolute URLs inside HTML/CSS so links stay on our domain
+            sub_filter_types text/html text/css application/javascript;
+            sub_filter_once off;
+            sub_filter 'https://${TARGET_HOST}' '$host';
+            sub_filter 'http://${TARGET_HOST}'  '$host';
+
+            # sub_filter needs uncompressed responses
             proxy_set_header Accept-Encoding "";
 
-            # 🔑 Timeouts
+            # Timeouts
             proxy_connect_timeout 15s;
             proxy_read_timeout    60s;
             proxy_send_timeout    60s;
 
-            # 🔑 Follow upstream redirects gracefully (do not rewrite Location)
-            proxy_redirect https://your-target-host.com/ /;
-proxy_redirect http://your-target-host.com/  /;
-
-            # 🔑 Handle large headers
+            # Buffers
             proxy_buffer_size          16k;
             proxy_buffers              8 16k;
             proxy_busy_buffers_size    32k;
