@@ -51,7 +51,8 @@ http {
             proxy_send_timeout    60s;
 
             # 🔑 Follow upstream redirects gracefully (do not rewrite Location)
-            proxy_redirect off;
+            proxy_redirect https://your-target-host.com/ /;
+proxy_redirect http://your-target-host.com/  /;
 
             # 🔑 Handle large headers
             proxy_buffer_size          16k;
