@@ -31,7 +31,7 @@ http {
             # Variable forces runtime DNS re-resolution
             set $upstream "${TARGET_URL}";
 
-            # ✅ Correct URI composition (keeps path AND query string)
+            #  Correct URI composition (keeps path AND query string)
             proxy_pass $upstream$uri$is_args$args;
 
             # SNI + TLS correctness
